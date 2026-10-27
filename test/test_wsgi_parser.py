@@ -26,6 +26,38 @@ class TestFormParser(BaseParserTest):
        self.assertEqual(files['file1'].name, 'file1')
        self.assertEqual(files['file1'].content_type, 'image/png')
 
+    def test_multipart_boundary_whitespace(self):
+        self.boundary = 'demo'
+        self.write_field('field', 'ok')
+        self.write_end()
+        for whitespace in ('', ' ', '\t', '  \t '):
+            with self.subTest(whitespace=whitespace):
+                self.environ['CONTENT_TYPE'] = 'multipart/form-data;' + whitespace + 'boundary=demo'
+                forms, files = self.parse_form_data(strict=True)
+                self.assertEqual(dict(forms), {'field': 'ok'})
+                self.assertEqual(dict(files), {})
+
+    def test_multipart_disposition_whitespace(self):
+        self.boundary = 'demo'
+        self.environ['CONTENT_TYPE'] = 'multipart/form-data; boundary=demo'
+        for whitespace in ('', ' ', '\t', '  \t '):
+            with self.subTest(whitespace=whitespace):
+                self.reset().write_boundary()
+                self.write('Content-Disposition: form-data;' + whitespace + 'name="field"\r\n\r\nok')
+                self.write_boundary()
+                self.write(
+                    'Content-Disposition: form-data;' + whitespace + 'name="upload";'
+                    + whitespace + 'filename="test.txt"\r\n',
+                    'Content-Type: text/plain\r\n\r\nfile contents',
+                )
+                self.write_end()
+                forms, files = self.parse_form_data(strict=True)
+                self.assertEqual(dict(forms), {'field': 'ok'})
+                self.assertEqual(len(files), 1)
+                self.assertEqual(files['upload'].name, 'upload')
+                self.assertEqual(files['upload'].filename, 'test.txt')
+                self.assertEqual(files['upload'].raw, b'file contents')
+
     def test_multipart_strict_passed_to_parser(self):
         self.write(
             "--foo\r\n",

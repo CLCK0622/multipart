@@ -44,6 +44,35 @@ class TestHeaderParser(unittest.TestCase):
         parse = functools.partial(multipart.parse_options_header, unquote=multipart.content_disposition_unquote)
         self.assertEqual(parse(head+'FileName="Te%22s\\\\t.txt"')[1]['filename'], 'Te"s\\\\t.txt')
 
+    def test_options_parser_parameter_whitespace(self):
+        for whitespace in ('', ' ', '\t', '  \t '):
+            for boundary in ('demo', '"demo"'):
+                with self.subTest(whitespace=whitespace, boundary=boundary):
+                    header = 'multipart/form-data;' + whitespace + 'boundary=' + boundary
+                    self.assertEqual(
+                        multipart.parse_options_header(header),
+                        ('multipart/form-data', {'boundary': 'demo'}),
+                    )
+
+    def test_options_parser_non_ows_whitespace(self):
+        for whitespace in ('\r', '\n', '\r\n', '\v', '\f', '\u00a0'):
+            with self.subTest(whitespace=whitespace):
+                header = 'multipart/form-data;' + whitespace + 'boundary=demo'
+                self.assertEqual(multipart.parse_options_header(header), ('multipart/form-data', {}))
+
+    def test_content_disposition_parameter_whitespace(self):
+        for whitespace in ('', ' ', '\t', '  \t '):
+            with self.subTest(whitespace=whitespace):
+                header = 'form-data;' + whitespace + 'name="field";' + whitespace + 'filename="test.txt"'
+                self.assertEqual(
+                    multipart.parse_options_header(header, unquote=multipart.content_disposition_unquote),
+                    ('form-data', {'name': 'field', 'filename': 'test.txt'}),
+                )
+                self.assertEqual(
+                    multipart.parse_content_disposition(header),
+                    ('form-data', 'field', 'test.txt'),
+                )
+
     def test_content_disposition_parser(self):
         parse = multipart.parse_content_disposition
 

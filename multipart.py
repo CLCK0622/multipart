@@ -222,7 +222,7 @@ _re_hname = re.compile(_hname, re.ASCII)
 # A token or quoted-string (simple qs | token | slow qs)
 _value = r'"[^\\"]*"|%s|"(?:\\.|[^\\"])*"' % _token
 # A "; key=value" pair from content-disposition header
-_option = r"; *(%s) *= *(%s)" % (_hname, _value)
+_option = r";[ \t]*(%s) *= *(%s)" % (_hname, _value)
 _re_option = re.compile(_option)
 
 
